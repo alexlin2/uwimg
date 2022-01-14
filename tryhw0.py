@@ -1,5 +1,5 @@
 from uwimg import *
-'''
+
 # 1. Getting and setting pixels
 im = load_image("data/dog.jpg")
 for row in range(im.h):
@@ -22,7 +22,7 @@ save_image(im, "overflow")
 # 5. Clamp Image
 clamp_image(im)
 save_image(im, "doglight_fixed")
-'''
+
 # 6-7. Colorspace and saturation
 im = load_image("data/dog.jpg")
 rgb_to_hsv(im)
