@@ -113,8 +113,21 @@ image smooth_image(image im, float sigma)
 image structure_matrix(image im, float sigma)
 {
     image S = make_image(im.w, im.h, 3);
-    // TODO: calculate structure matrix for im.
-    return S;
+    image fx = make_gx_filter();
+    image fy = make_gy_filter();
+    image ix = convolve_image(im, fx, 0);
+    image iy = convolve_image(im, fy, 0);
+    for (int y = 0; y < S.h; y++) {
+        for (int x = 0; x < S.w; x++) {
+            set_pixel(S, x, y, 0, pow(get_pixel(ix,x,y,0), 2));
+            set_pixel(S, x, y, 1, pow(get_pixel(iy,x,y,0), 2));
+            set_pixel(S, x, y, 2, get_pixel(ix,x,y,0) * get_pixel(iy,x,y,0));
+        }
+    }
+    image result = smooth_image(S, sigma);
+    save_image(result, "structure_matrix");
+
+    return result;
 }
 
 // Estimate the cornerness of each pixel given a structure matrix S.
@@ -125,6 +138,14 @@ image cornerness_response(image S)
     image R = make_image(S.w, S.h, 1);
     // TODO: fill in R, "cornerness" for each pixel using the structure matrix.
     // We'll use formulation det(S) - alpha * trace(S)^2, alpha = .06.
+    static float alpha = 0.06;
+    for (int y = 0; y < S.h; y++) {
+        for (int x = 0; x < S.w; x++) {
+            float det = get_pixel(S, x, y, 0) * get_pixel(S, x, y, 1) - get_pixel(S, x, y, 2) * get_pixel(S, x, y, 2);
+            float trace = get_pixel(S, x, y, 0) + get_pixel(S, x, y, 1);
+            set_pixel(R, x, y, 0, det - alpha * trace * trace);
+        }
+    }
     return R;
 }
 
@@ -135,11 +156,25 @@ image cornerness_response(image S)
 image nms_image(image im, int w)
 {
     image r = copy_image(im);
-    // TODO: perform NMS on the response map.
-    // for every pixel in the image:
-    //     for neighbors within w:
-    //         if neighbor response greater than pixel response:
-    //             set response to be very low (I use -999999 [why not 0??])
+    //TODO: perform NMS on the response map.
+    for every pixel in the image:
+        for neighbors within w:
+            if neighbor response greater than pixel response:
+                set response to be very low (I use -999999 [why not 0??])
+    for (int x = 0; x < im.w; x++) {
+         for (int y = 0; y < im.h; y++) {
+             float value = get_pixel(im, x, y, 0);
+             for (int i = 1; i <= w; i++) {
+                 for (int j = 1; j <= w ; j++) {
+                     if(get_pixel(im, x-i, y-j, 0) >= value || get_pixel(im, x-i, y+j, 0) >= value
+                     || get_pixel(im, x+i, y-j, 0) >= value || get_pixel(im, x+i, y+j, 0) >= value) {
+                         set_pixel(r, x, y, 0, 0);
+                     }
+                 }
+             }
+         }
+    }
+
     return r;
 }
 
@@ -161,14 +196,27 @@ descriptor *harris_corner_detector(image im, float sigma, float thresh, int nms,
     // Run NMS on the responses
     image Rnms = nms_image(R, nms);
 
-
     //TODO: count number of responses over threshold
-    int count = 1; // change this
-
+    int count = 0;
+    for (int x = 0; x < Rnms.w; x++) {
+        for (int y = 0; y < Rnms.h; y++) {
+            if (get_pixel(Rnms, x, y, 0) > thresh) {
+                count++;
+            }
+        }
+    }
     
     *n = count; // <- set *n equal to number of corners in image.
     descriptor *d = calloc(count, sizeof(descriptor));
-    //TODO: fill in array *d with descriptors of corners, use describe_index.
+    int i = 0;
+    for (int x = 0; x < Rnms.w; x++) {
+        for (int y = 0; y < Rnms.h; y++) {
+            if (get_pixel(Rnms, x, y, 0) > thresh) {
+                d[i] = describe_index(im, Rnms.w * y + x);
+                i++;
+            }
+        }
+    }
 
 
     free_image(S);
