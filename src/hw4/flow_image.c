@@ -47,7 +47,25 @@ void draw_line(image im, float x, float y, float dx, float dy)
 image make_integral_image(image im)
 {
     image integ = make_image(im.w, im.h, im.c);
-    // TODO: fill in the integral image
+    for (int c = 0; c < im.c; c++) {
+        for (int y = 0; y < integ.h; y++) {
+            for (int x = 0; x < integ.w; x++) {
+                float sum = 0.0;
+                sum += get_pixel(im, x, y, c);
+                if (x >= 0 && y-1 >= 0) {
+                    sum += get_pixel(integ, x, y-1, c);
+                }
+                if (x-1 >= 0 && y >= 0) {
+                    sum += get_pixel(integ, x-1, y, c);
+                }
+                if (x-1 >= 0 && y-1 >= 0) {
+                    sum -= get_pixel(integ, x-1, y-1, c);
+                }
+                set_pixel(integ, x, y, c, sum);
+            }
+        }
+    }
+    
     return integ;
 }
 
@@ -58,9 +76,20 @@ image make_integral_image(image im)
 image box_filter_image(image im, int s)
 {
     int i,j,k;
+    int n = s*s;
     image integ = make_integral_image(im);
     image S = make_image(im.w, im.h, im.c);
-    // TODO: fill in S using the integral image.
+    for (int c = 0; c < S.c; c++) {
+        for (int y = 0; y < S.h; y++) {
+            for (int x = 0; x < S.w; x++) {
+                float sum = get_pixel(integ, x + s/2, y + s/2, c) 
+                        -get_pixel(integ, x + s/2, y - s/2 - 1, c) 
+                        -get_pixel(integ, x - s/2 - 1, y + s/2, c) 
+                        +get_pixel(integ, x - s/2 - 1, y - s/2 - 1, c);
+                set_pixel(S, x, y, c, sum/n);
+            }
+        }
+    }
     return S;
 }
 
@@ -81,13 +110,33 @@ image time_structure_matrix(image im, image prev, int s)
     }
 
     // TODO: calculate gradients, structure components, and smooth them
+    image fx = make_gx_filter();
+    image fy = make_gy_filter();
+    image ix = convolve_image(im, fx, 0);
+    image iy = convolve_image(im, fy, 0);
+    image it = sub_image(im, prev);
 
-    image S;
+    image S = make_image(im.w, im.h, 5);;
+
+    for (int y = 0; y < im.h; y++) {
+        for (int x = 0; x < im.w; x++) {
+            float ixx = get_pixel(ix, x, y, 0);
+            float iyy = get_pixel(iy, x, y, 0);
+            float itt = get_pixel(it, x, y, 0);
+            set_pixel(S, x, y, 0, pow(ixx, 2));
+            set_pixel(S, x, y, 1, pow(iyy, 2));
+            set_pixel(S, x, y, 2, ixx * iyy);
+            set_pixel(S, x, y, 3, ixx * itt);
+            set_pixel(S, x, y, 4, iyy * itt);
+        }
+    }
+
+
 
     if(converted){
         free_image(im); free_image(prev);
     }
-    return S;
+    return box_filter_image(S, s);
 }
 
 // Calculate the velocity given a structure image
@@ -110,6 +159,16 @@ image velocity_image(image S, int stride)
             float vx = 0;
             float vy = 0;
 
+            M.data[0][0] = Ixx;
+            M.data[0][1] = Ixy;
+            M.data[1][0] = Ixy;
+            M.data[1][1] = Iyy;
+            matrix inverted_M = matrix_invert(M);
+            if (inverted_M.data) {
+                vx = -inverted_M.data[0][0] * Ixt - inverted_M.data[0][1] * Iyt;
+                vy = -inverted_M.data[1][0] * Ixt - inverted_M.data[1][1] * Iyt;
+            }
+            
             set_pixel(v, i/stride, j/stride, 0, vx);
             set_pixel(v, i/stride, j/stride, 1, vy);
         }

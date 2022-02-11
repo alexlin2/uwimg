@@ -23,7 +23,7 @@ void set_pixel(image im, int x, int y, int c, float v)
 image copy_image(image im)
 {
     image copy = make_image(im.w, im.h, im.c);
-    memcpy(im.data, copy.data, im.w*im.h*im.c*sizeof(float));
+    memcpy(copy.data, im.data, im.w*im.h*im.c*sizeof(float));
     return copy;
 }
 

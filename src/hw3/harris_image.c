@@ -162,15 +162,16 @@ image nms_image(image im, int w)
     //             set response to be very low (I use -999999 [why not 0??])
     for (int x = 0; x < im.w; x++) {
          for (int y = 0; y < im.h; y++) {
-             float value = get_pixel(im, x, y, 0);
-             for (int i = 1; i <= w; i++) {
-                 for (int j = 1; j <= w ; j++) {
-                     if(get_pixel(im, x-i, y-j, 0) >= value || get_pixel(im, x-i, y+j, 0) >= value
-                     || get_pixel(im, x+i, y-j, 0) >= value || get_pixel(im, x+i, y+j, 0) >= value) {
-                         set_pixel(r, x, y, 0, -99999);
-                     }
-                 }
-             }
+            float value = get_pixel(im, x, y, 0);
+            for (int i = 1; i <= w; i++) {
+                for (int j = 1; j <= w ; j++) {
+                    if(get_pixel(im, x-i, y-j, 0) >= value || get_pixel(im, x-i, y+j, 0) >= value
+                    || get_pixel(im, x+i, y-j, 0) >= value || get_pixel(im, x+i, y+j, 0) >= value) {
+                        set_pixel(r, x, y, 0, -99999);
+                        
+                    }
+                }
+            }  
          }
     }
 
@@ -193,13 +194,14 @@ descriptor *harris_corner_detector(image im, float sigma, float thresh, int nms,
     image R = cornerness_response(S);
 
     // Run NMS on the responses
-    image Rnms = copy_image(R);//nms_image(R, nms);
+    image Rnms = nms_image(R, nms);
+
+
 
     //TODO: count number of responses over threshold
     int count = 0;
     for (int x = 0; x < Rnms.w; x++) {
         for (int y = 0; y < Rnms.h; y++) {
-            printf("%.5f", get_pixel(R, x, y, 0));
             if (get_pixel(Rnms, x, y, 0) > thresh) {
                 count++;
             }
@@ -235,5 +237,5 @@ void detect_and_draw_corners(image im, float sigma, float thresh, int nms)
     int n = 0;
     descriptor *d = harris_corner_detector(im, sigma, thresh, nms, &n);
     mark_corners(im, d, n);
-    printf("%d\n", n);
+    //printf("%d\n", n);
 }
