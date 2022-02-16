@@ -23,6 +23,8 @@ matrix copy_matrix(matrix m);
 double *sle_solve(matrix A, double *b);
 matrix matrix_mult_matrix(matrix a, matrix b);
 matrix matrix_elmult_matrix(matrix a, matrix b);
+matrix matrix_sub_matrix(matrix a, matrix b);
+void scale_matrix(matrix m, double s);
 void print_matrix(matrix m);
 double **n_principal_components(matrix m, int n);
 void test_matrix();
